@@ -10,7 +10,7 @@ from aiohttp import web
 from discord import app_commands
 from discord.ext import tasks
 
-from .config import Config, GroupMapping
+from .config import Config, GroupMapping, Sheet
 from .db import Database, EmailAlreadyLinked
 from .google_groups import GroupsClient
 from .sync import ApplyResult, Change, apply_changes, groups_for_roles, plan_full, plan_user
@@ -19,8 +19,17 @@ from .web import build_app
 log = logging.getLogger(__name__)
 
 
-def _sheet_lines(groups: list[GroupMapping]) -> str:
-    lines = [f"• [{s.name}]({s.url})" for g in groups for s in g.sheets]
+def _sheets(groups: list[GroupMapping]) -> list[Sheet]:
+    """Sheets reachable through these groups, once each even if shared with several."""
+    seen: dict[str, Sheet] = {}
+    for g in groups:
+        for s in g.sheets:
+            seen.setdefault(s.url, s)
+    return list(seen.values())
+
+
+def _sheet_lines(sheets: list[Sheet]) -> str:
+    lines = [f"• [{s.name}]({s.url})" for s in sheets]
     return "\n".join(lines) if lines else "• (no sheets listed)"
 
 
@@ -170,7 +179,7 @@ class SheetBot(discord.Client):
         if self.config.dry_run:
             text += " The bot is still in test mode, so access will be granted once it goes live."
         elif granted:
-            text += " You now have access to:\n" + _sheet_lines(granted)
+            text += " You now have access to:\n" + _sheet_lines(_sheets(granted))
             text += "\nOpen them while signed in to that Google account. Access can take a few minutes."
         else:
             text += " You don't have a role with sheet access yet; you'll get access automatically when you do."
@@ -191,8 +200,8 @@ class SheetBot(discord.Client):
             return
         await self.sync_member(after.id)
 
-        old = {g.email for g in groups_for_roles(self.config.groups, before_roles)}
-        new = [g for g in groups_for_roles(self.config.groups, after_roles) if g.email not in old]
+        had = {s.url for s in _sheets(groups_for_roles(self.config.groups, before_roles))}
+        new = [s for s in _sheets(groups_for_roles(self.config.groups, after_roles)) if s.url not in had]
         if new and not self.config.dry_run:
             await self.dm(after.id, "Your new role gives you access to:\n" + _sheet_lines(new))
 
@@ -242,7 +251,7 @@ class SheetBot(discord.Client):
             roles = {r.id for r in getattr(interaction.user, "roles", [])}
             granted = groups_for_roles(self.config.groups, roles)
             text = f"Linked as **{email}**.\n"
-            text += ("Your sheets:\n" + _sheet_lines(granted)) if granted else "Your roles don't include any sheets yet."
+            text += ("Your sheets:\n" + _sheet_lines(_sheets(granted))) if granted else "Your roles don't include any sheets yet."
             await interaction.response.send_message(text, ephemeral=True, suppress_embeds=True)
 
         @self.tree.command(name="sync", description="Admin: compare all groups with Discord roles now")

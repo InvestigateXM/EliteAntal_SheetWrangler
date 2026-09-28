@@ -21,6 +21,11 @@ a role or leave the server lose access automatically.
 Sheets stay owned by whoever owns them now, and players keep using their own
 Gmail accounts.
 
+Roles are matched by **role ID**, not name, so renaming a role or changing its
+emoji doesn't break anything. To copy a role ID, turn on Developer Mode
+(Discord settings > Advanced), then right-click the role under Server Settings >
+Roles.
+
 ### Player commands
 
 | Command   | What it does |
@@ -50,7 +55,8 @@ Gmail accounts.
    **Allow external members**, and set who can see and post to it to owners
    only, since these groups are only for permissions.
 4. In each Google Sheet, click **Share** and add the group's address as Viewer or
-   Editor. For sensitive sheets, open the gear in the share dialog and turn off
+   Editor. A sheet can be shared with several groups, e.g. `pledged@` as Viewer
+   and `trusted@` as Editor; someone in both gets the higher level. For sensitive sheets, open the gear in the share dialog and turn off
    **Viewers and commenters can see the option to download, print and copy**.
 
 ### 2. Google Cloud project

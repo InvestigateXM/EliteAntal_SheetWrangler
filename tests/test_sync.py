@@ -124,3 +124,13 @@ def test_db_links_and_states(tmp_path):
     assert db.peek_state(state) == 5
     assert db.consume_state(state) == 5
     assert db.consume_state(state) is None
+
+
+def test_sheet_shared_with_two_groups_listed_once():
+    from antal_sheets.bot import _sheets
+    from antal_sheets.config import Sheet
+
+    shared = Sheet("Targets", "https://docs.google.com/spreadsheets/d/T")
+    g1 = GroupMapping("pledged@x.org", frozenset({PLEDGED}), sheets=(shared,))
+    g2 = GroupMapping("trusted@x.org", frozenset({OFFICER}), sheets=(shared, Sheet("Ops", "u2")))
+    assert [s.name for s in _sheets([g1, g2])] == ["Targets", "Ops"]
