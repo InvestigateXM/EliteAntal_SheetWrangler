@@ -1,0 +1,4 @@
+discord.py>=2.3,<3
+google-auth>=2.20,<3
+requests>=2.31,<3
+PyYAML>=6,<7
