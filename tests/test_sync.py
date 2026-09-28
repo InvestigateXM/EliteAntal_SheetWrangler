@@ -134,3 +134,19 @@ def test_sheet_shared_with_two_groups_listed_once():
     g1 = GroupMapping("pledged@x.org", frozenset({PLEDGED}), sheets=(shared,))
     g2 = GroupMapping("trusted@x.org", frozenset({OFFICER}), sheets=(shared, Sheet("Ops", "u2")))
     assert [s.name for s in _sheets([g1, g2])] == ["Targets", "Ops"]
+
+
+def test_status_lists_sheet_once_with_all_granting_roles():
+    from antal_sheets.bot import _sheet_access
+    from antal_sheets.config import Sheet
+
+    shared = Sheet("Targets", "T")
+    ops = Sheet("Ops", "O")
+    g1 = GroupMapping("pledged@x.org", frozenset({PLEDGED}), sheets=(shared,))
+    g2 = GroupMapping("trusted@x.org", frozenset({OFFICER, LOGISTICS}), sheets=(shared, ops))
+    g3 = GroupMapping("other@x.org", frozenset({99}), sheets=(Sheet("Hidden", "H"),))
+    access = _sheet_access([g1, g2, g3], [OFFICER, PLEDGED, LOGISTICS])
+    assert [(s.name, roles) for s, roles in access] == [
+        ("Targets", [OFFICER, PLEDGED, LOGISTICS]),
+        ("Ops", [OFFICER, LOGISTICS]),
+    ]

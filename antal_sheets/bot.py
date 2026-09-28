@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Iterable
 
 import discord
 from aiohttp import web
@@ -26,6 +27,23 @@ def _sheets(groups: list[GroupMapping]) -> list[Sheet]:
         for s in g.sheets:
             seen.setdefault(s.url, s)
     return list(seen.values())
+
+
+def _sheet_access(groups: Iterable[GroupMapping], member_roles: list[int]) -> list[tuple[Sheet, list[int]]]:
+    """Each sheet the member can reach once, with every role of theirs that grants it.
+
+    ``member_roles`` is in display order; the returned role lists keep that order.
+    """
+    access: dict[str, tuple[Sheet, list[int]]] = {}
+    for g in groups:
+        granting = [r for r in member_roles if r in g.roles]
+        if not granting:
+            continue
+        for s in g.sheets:
+            _, roles = access.setdefault(s.url, (s, []))
+            roles.extend(r for r in granting if r not in roles)
+    order = {r: i for i, r in enumerate(member_roles)}
+    return [(s, sorted(roles, key=order.__getitem__)) for s, roles in access.values()]
 
 
 def _sheet_lines(sheets: list[Sheet]) -> str:
@@ -248,11 +266,23 @@ class SheetBot(discord.Client):
                     "You haven't linked a Google account yet. Run /link to get started.", ephemeral=True
                 )
                 return
-            roles = {r.id for r in getattr(interaction.user, "roles", [])}
-            granted = groups_for_roles(self.config.groups, roles)
+            # Highest role first, as Discord shows them.
+            roles = [r.id for r in reversed(getattr(interaction.user, "roles", []))]
+            access = _sheet_access(self.config.groups, roles)
             text = f"Linked as **{email}**.\n"
-            text += ("Your sheets:\n" + _sheet_lines(_sheets(granted))) if granted else "Your roles don't include any sheets yet."
-            await interaction.response.send_message(text, ephemeral=True, suppress_embeds=True)
+            if access:
+                text += "Your sheets:\n" + "\n".join(
+                    f"• [{sheet.name}]({sheet.url}) via {', '.join(f'<@&{r}>' for r in granting)}"
+                    for sheet, granting in access
+                )
+            else:
+                text += "Your roles don't include any sheets yet."
+            await interaction.response.send_message(
+                text[:2000],
+                ephemeral=True,
+                suppress_embeds=True,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
 
         @self.tree.command(name="sync", description="Admin: compare all groups with Discord roles now")
         async def sync(interaction: discord.Interaction) -> None:
