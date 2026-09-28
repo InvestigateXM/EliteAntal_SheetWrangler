@@ -1,0 +1,13 @@
+services:
+  sheet-manager:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      GOOGLE_SERVICE_ACCOUNT_FILE: /app/config/service-account.json
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+      - ./service-account.json:/app/config/service-account.json:ro
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:8080:8080"

@@ -1,0 +1,58 @@
+# Copy to config.yaml and fill in. Secrets are NOT stored here; they come from
+# environment variables (see .env.example).
+#
+# To get Discord IDs: Discord settings > Advanced > Developer Mode, then
+# right-click a server, role or channel and choose "Copy ID".
+
+discord:
+  guild_id: 123456789012345678
+  # Roles (besides anyone with Manage Server) allowed to run /sync.
+  admin_roles: []
+  # Optional channel where sync summaries are posted. Strongly recommended
+  # while dry_run is on so you can review what would change.
+  log_channel_id: null
+
+google:
+  # OAuth client ID of the "Web application" client used for /link.
+  oauth_client_id: "xxxxxxxx.apps.googleusercontent.com"
+  # Service account key file with the Groups Admin role.
+  service_account_file: service-account.json
+  # Only if you use domain-wide delegation instead of assigning the role to
+  # the service account directly: the admin user to act as.
+  delegated_admin: null
+
+web:
+  # Public HTTPS address of this bot, e.g. behind the reverse proxy you
+  # already use for Authentik. The redirect URI to register with Google is
+  # <public_base_url>/oauth/callback
+  public_base_url: "https://sheets.example.org"
+  listen_host: 0.0.0.0
+  listen_port: 8080
+
+database_path: data/links.sqlite3
+
+sync:
+  reconcile_interval_minutes: 60
+  # Start with true. The bot then only logs what it would change. Switch to
+  # false once the log looks right.
+  dry_run: true
+  # If a single full sync would remove more people than this, removals are
+  # held back and reported instead (adds still happen).
+  max_removals_per_run: 25
+
+# One entry per Google group. A Discord member with ANY of the listed roles
+# is put in the group. Share each sheet with its group once, in Google Sheets.
+groups:
+  - email: pledged@example.org
+    roles: [111111111111111111]
+    # Addresses the bot must never remove (e.g. sheet owners, officers).
+    protected: []
+    # Shown to players in /status and in DMs. Doesn't affect access.
+    sheets:
+      - name: Weekly Powerplay targets
+        url: https://docs.google.com/spreadsheets/d/XXXX
+  - email: logistics@example.org
+    roles: [222222222222222222]
+    sheets:
+      - name: Logistics
+        url: https://docs.google.com/spreadsheets/d/YYYY
